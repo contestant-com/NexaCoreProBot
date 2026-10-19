@@ -31,7 +31,7 @@ SUBSCRIBERS = set()
 ADMIN_IDS = [7814262999]  # Your Telegram UID
 
 # ----------------------------------------------------
-# 3. Bot Handlers & Automated Payment Logic
+# 3. Bot Handlers & Automated Logic
 # ----------------------------------------------------
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -83,6 +83,26 @@ async def successful_payment(update: Update, context: ContextTypes.DEFAULT_TYPE)
         parse_mode="Markdown"
     )
 
+async def grant_vip(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Manually grants VIP access to a user (Admin only)."""
+    user_id = update.effective_user.id
+    if user_id not in ADMIN_IDS:
+        await update.message.reply_text("⛔ Unauthorized command.")
+        return
+
+    if not context.args:
+        # If no user ID provided, grant access to yourself
+        SUBSCRIBERS.add(update.effective_chat.id)
+        await update.message.reply_text("👑 VIP status granted to yourself instantly!")
+        return
+
+    try:
+        target_id = int(context.args[0])
+        SUBSCRIBERS.add(target_id)
+        await update.message.reply_text(f"✅ Successfully granted VIP status to user `{target_id}`!", parse_mode="Markdown")
+    except ValueError:
+        await update.message.reply_text("❌ Invalid User ID. Usage: `/grant 123456789`", parse_mode="Markdown")
+
 async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Sends broadcast messages to active users (Admin only)."""
     user_id = update.effective_user.id
@@ -122,6 +142,7 @@ def main():
     # Register handlers
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("subscribe", subscribe))
+    app.add_handler(CommandHandler("grant", grant_vip))
     app.add_handler(CommandHandler("broadcast", broadcast))
     app.add_handler(PreCheckoutQueryHandler(precheckout_callback))
     app.add_handler(MessageHandler(filters.SUCCESSFUL_PAYMENT, successful_payment))
